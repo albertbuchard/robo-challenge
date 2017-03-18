@@ -2,6 +2,7 @@ import paho.mqtt.client as mqtt
 import json
 import math as m
 import numpy as np
+import time
 
 SERVER = "127.0.0.1"
 PORT = 1883
@@ -34,9 +35,11 @@ class Robot(object):
         self.visitedGoodPoints = []
         self.visitedBadPoints = []
 
+        self.beginAt = time.time()
 
 
 
+    # Mouvements
     def moveForward(self, value):
         client.publish('robot/process', '{"command": "forward", "args": ' + str(value) + '}', qos=0, retain=False)
 
@@ -60,6 +63,7 @@ class Robot(object):
         self.rightCount = vRight
         self.leftCount = vLeft
 
+    # Trig functions
     def getTargetAngle(self, xTarget, yTarget):
         xDiff = self.x - xTarget
         yDiff = self.y - yTarget
@@ -74,6 +78,7 @@ class Robot(object):
                         targetAngle = 180 + targetAngle
         return targetAngle
 
+    # Path finding
     def getNonVisitedGoodPoints():
         # loop through positive points
         points = []
@@ -96,6 +101,15 @@ class Robot(object):
 
 
         return nextSucker;
+
+    def getRemainingTime():
+        timeSpentInMs = time.time() - self.beginAt
+        remainingTime = 120000 - timeSpentInMs
+
+        if remainingTime < 0:
+            remainingTime = 0
+            
+        return remainingTime
 
 
 
