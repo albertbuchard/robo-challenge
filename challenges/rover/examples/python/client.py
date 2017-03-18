@@ -207,10 +207,10 @@ def generateTargets(points):
     for point in points:
         if point["score"] == 1:
             goodPoints[goodCounter] = [point["x"], point["y"]]
-            goodCounter++
+            goodCounter += 1
         else:
             badPoints[badCounter] = [point["x"], point["y"]]
-            badCounter++
+            badCounter += 1
     print("Good points:" + goodPoints)
     print("Bad points:" + badPoints)
 
