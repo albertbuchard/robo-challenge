@@ -50,7 +50,7 @@ class Robot(object):
         self.angularSpeedDegree = 36 # degree per sec
 
         self.max_x = 1280
-        self.max_y = 960    
+        self.max_y = 960
         self.maxDuration = 120000
 
 
@@ -120,7 +120,7 @@ class Robot(object):
         return (-targetAngle)
 
 
-    '''
+
     # Path finding
     def getNonVisitedGoodPoints(self):
         # loop through positive points
@@ -147,7 +147,7 @@ class Robot(object):
 
         return nextSucker;
 
-    '''
+
 
     def gotToPoint(self, coordT):
         robot.stop()
@@ -429,6 +429,11 @@ def on_message(client, userdata, msg):
     elif GAME_STATE == 1:
         if (msg.topic == 'players/%s/game' % PLAYER_NAME):
             generateTargetsAndObstacles(obj['points'])
+            global targets
+            global obstacles
+            robot.goodPoints = targets
+            robot.badPoints = obstacles
+            robot.
             coordT = targets.pop()
             GAME_STATE = 2
 
