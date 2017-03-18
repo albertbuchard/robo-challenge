@@ -12,8 +12,8 @@ PLAYER_NAME = "TheRegressor"
 GAME_STATE = 0 # 0 is waiting, 1 is playing
 DISTANCE_BETWEEN_WEELS = 25210.14298575622/90
 CONVERT_COUNT_DIST = 3/10
-goodPoints = numpy.zeros(shape=(45,2))
-badPoints = numpy.zeros(shape=(5,2))
+goodPoints = np.zeros(shape=(45,2))
+badPoints = np.zeros(shape=(5,2))
 targetPoint = 0 #index of goodPoints which is the current target
 game_data = {}
 game_log = []
@@ -101,8 +101,10 @@ class Robot(object):
 
         return points
 
-    def getNearestNeighbour(fromPoint = [self.x, self.y]):
-        self.currentTarget
+    def getNearestNeighbour(fromPoint = None):
+        if fromPoint is None:
+            fromPoint = self.currentTarget
+        
         minDistance = 100000
         nextSucker = None
         for point in self.getNonVisitedGoodPoints():
