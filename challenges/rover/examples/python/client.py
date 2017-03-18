@@ -77,8 +77,8 @@ class Robot(object):
         else:
             if xDiff > 0:
                 targetAngle = 180 - targetAngle
-                    else:
-                        targetAngle = 180 + targetAngle
+            else:
+                targetAngle = 180 + targetAngle
         return targetAngle
 
     # Path finding
@@ -99,8 +99,8 @@ class Robot(object):
             for point in self.getNonVisitedGoodPoints()):
 
                 distance= np.sqrt(np.dot((point-fromPoint),(point-fromPoint)))
-                    if minDistance < distance:
-                        nextSucker=point
+                if minDistance < distance:
+                    nextSucker=point
 
 
         return nextSucker;
@@ -187,11 +187,11 @@ def on_message(client, userdata, msg):
                 print("********** RECEIVED START FROM SERVER ************")
                     client.publish('players/' + PLAYER_NAME , '{"command": "start"}')
                         GAME_STATE = 1
-                    elif (obj['command'] == "finished"):
-                        print("********** RECEIVED FINISHED FROM SERVER ************")
-                        GAME_STATE = 0
-                        client.disconnect()
-                        exit()
+            elif (obj['command'] == "finished"):
+                print("********** RECEIVED FINISHED FROM SERVER ************")
+                GAME_STATE = 0
+                client.disconnect()
+                exit()
 
 
     i += 1
