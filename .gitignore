@@ -19,3 +19,5 @@ target/
 
 # docker
 docker_content
+
+challenges/rover/examples/python/data.txt

@@ -1,5 +1,6 @@
 import paho.mqtt.client as mqtt
 import json
+import math as m
 
 SERVER = "127.0.0.1"
 PORT = 1883
@@ -7,10 +8,60 @@ PORT = 1883
 PLAYER_NAME = "TheRegressor"
 
 GAME_STATE = 0 # 0 is waiting, 1 is playing
+DISTANCE_BETWEEN_WEELS = 4.8
 
 game_data = {}
 game_log = []
 i = 0
+
+
+class Robot(object):
+    """docstring for ClassName"""
+    def __init__(self):
+        self.x = 0
+        self.y = 0
+        self.rightCount = 0
+        self.leftCount = 0
+        self.angle = 0
+
+    def moveForward(self, value):
+        client.publish('robot/process', '{"command": "forward", "args": ' + str(value) + '}', qos=0, retain=False)
+
+    def backward(value):
+        return '{"command": backward", "args": ' + str(value) + '}'
+
+    def right(degree):
+        return '{"command": right", "args": ' + str(degree) + '}'
+
+    def left(degree):
+        return '{"command": left", "args": ' + str(degree) + '}'
+
+    def increment(self, vRight, vLeft):
+        dRight = vRight - self.rightCount
+        dLeft = vLeft - self.leftCount
+        dCenter = (dRight+dLeft)/2
+        dAngle = (dLeft-dRight)/DISTANCE_BETWEEN_WEELS
+        self.x = self.x + dCenter*m.cos(dAngle)
+        self.y = self.x + dCenter*m.sin(dAngle)
+        self.angle = self.angle + dAngle
+        self.rightCount = vRight
+        self.leftCount = vLeft
+
+    def getTargetAngle(self, xTarget, yTarget):
+        xDiff = self.x - xTarget
+        yDiff = self.x - yTarget
+        targetAngle = math.abs(math.tan(xDiff/yDiff))
+        if yDiff > 0:
+            if xDiff < 0:
+                targetAngle = 360 - targetAngle
+        else:
+             if xDiff > 0:
+                 targetAngle = 180 - targetAngle
+             else:
+                 targetAngle = 180 + targetAngle
+        return targetAngle
+
+
 
 # The callback for when the client receives a CONNACK response from the server.
 def on_connect(client, userdata, flags, rc):
@@ -41,10 +92,22 @@ def on_message(client, userdata, msg):
 
 
     if GAME_STATE == 1:
-        # Pick a target
-        # Make a decision on the angle if not turned before
-        # Start moving
-        client.publish('robot/process', '{"command": "forward", "args": 600}')
+        if msg.topic == 'robot/state':
+            robot.increment(obj['right_motor'], obj['left_motor'])
+            print(obj)
+            print(robot.x) 
+            print(robot.y)
+            print(robot.angle)
+            if robot.angle > 200:
+                exit()
+            
+        elif (msg.topic == 'players/%s/game' % PLAYER_NAME):
+            print("********** STORED GAME_DATA ************")
+            game_data = obj
+            print(obj)
+            robot.moveForward(10)
+
+            
     elif (GAME_STATE == 0):
         if ((msg.topic=='players/%s/incoming' % PLAYER_NAME) and ("command" in obj)):
                 if (obj['command'] == "start"):
@@ -55,39 +118,30 @@ def on_message(client, userdata, msg):
                     print("********** RECEIVED FINISHED FROM SERVER ************")
                     GAME_STATE = 0
                     client.disconnect()
-        elif (msg.topic == 'players/%s/game' % PLAYER_NAME):
-            print("********** STORED GAME_DATA ************")
-            game_data = obj
+                    exit()
+        
 
     i += 1
     if (i>=10):
         i = 0
         with open("data.txt","w") as f: #in write mode
-            f.write("{}".format(game_log))
+            f.write("{}".format(game_log)) 
 
     #client.publish('players/' + PLAYER_NAME , '{"command": "backward", "args": 100}', qos=0, retain=False)
 
     # TODO: implement algorithm
-'''
 
-def forward(value):
-    print '{\"command\": forward\", \"args\": ' + str(value) + '}'
-    return '{"command": forward", "args": ' + str(value) + '}'
 
-def backward(value):
-    return '{"command": backward", "args": ' + str(value) + '}'
 
-def right(degree):
-    return '{"command": right", "args": ' + str(degree) + '}'
 
-def left(degree):
-    return '{"command": left", "args": ' + str(degree) + '}'
-'''
+
+
 
 
 
 if __name__ == '__main__':
 
+    robot = Robot()
     client = mqtt.Client()
     client.on_connect = on_connect
     client.on_message = on_message
