@@ -63,16 +63,18 @@ class Robot(object):
     def getTargetAngle(self, xTarget, yTarget):
         xDiff = self.x - xTarget
         yDiff = self.y - yTarget
-        targetAngle = math.abs(math.tan(xDiff/yDiff))
+        targetAngle = abs(m.tan(xDiff/yDiff))
         if yDiff > 0:
             if xDiff < 0:
                 targetAngle = 360 - targetAngle
         else:
             if xDiff > 0:
                 targetAngle = 180 - targetAngle
-                    else:
-                        targetAngle = 180 + targetAngle
+            else:
+                targetAngle = 180 + targetAngle
         return targetAngle
+
+    '''
 
     def getNonVisitedGoodPoints():
         # loop through positive points
@@ -86,17 +88,29 @@ class Robot(object):
 
     def getNearestNeighbour(fromPoint = [self.x, self.y]):
         self.currentTarget
-            minDistance = 100000
-            nextSucker = None
-            for point in self.getNonVisitedGoodPoints()):
+        minDistance = 100000
+        nextSucker = None
+        for point in self.getNonVisitedGoodPoints()):
 
-                distance= np.sqrt(np.dot((point-fromPoint),(point-fromPoint)))
-                    if minDistance < distance:
-                        nextSucker=point
+            distance= np.sqrt(np.dot((point-fromPoint),(point-fromPoint)))
+                if minDistance < distance:
+                    nextSucker=point
 
 
         return nextSucker;
 
+    '''
+
+
+    def gotToPoint(self):
+        xT = 1000
+        yT = 900
+        aT = self.getTargetAngle(xT,yT)
+        print('angle To Point')
+        print(aT)
+        self.turnRight((aT-self.angle)%360)
+        distanceToTarge = m.sqrt((xT-self.x)*(xT-self.x)+(yT-self.y)*(yT-self.y))
+        self.moveForward(distanceToTarge/CONVERT_COUNT_DIST)
 
 
 
@@ -123,6 +137,7 @@ def on_message(client, userdata, msg):
     global game_log
     global i
     global targets
+    global WAIT_FOR_EXEC_FLAG
 
     #print(msg.topic)
     obj = json.loads(msg.payload.decode("utf-8"))
@@ -150,12 +165,17 @@ def on_message(client, userdata, msg):
             print(robot.angle)
             robot.moveForward(20)
             robot.turnRight(5)
-        '''
+        
+
+        
         if WAIT_FOR_EXEC_FLAG:
-            robot.check(targets)
+            pass
+            #robot.check()
         else:
-            robot.gotToPoint(targets)
-        '''
+            robot.gotToPoint()
+            WAIT_FOR_EXEC_FLAG = True
+        
+        
 
     elif GAME_STATE == 1:
         if (msg.topic == 'players/%s/game' % PLAYER_NAME):
@@ -168,13 +188,13 @@ def on_message(client, userdata, msg):
         if ((msg.topic=='players/%s/incoming' % PLAYER_NAME) and ("command" in obj)):
             if (obj['command'] == "start"):
                 print("********** RECEIVED START FROM SERVER ************")
-                    client.publish('players/' + PLAYER_NAME , '{"command": "start"}')
-                        GAME_STATE = 1
-                    elif (obj['command'] == "finished"):
-                        print("********** RECEIVED FINISHED FROM SERVER ************")
-                        GAME_STATE = 0
-                        client.disconnect()
-                        exit()
+                client.publish('players/' + PLAYER_NAME , '{"command": "start"}')
+                GAME_STATE = 1
+            elif (obj['command'] == "finished"):
+                print("********** RECEIVED FINISHED FROM SERVER ************")
+                GAME_STATE = 0
+                client.disconnect()
+                exit()
 
 
     i += 1
