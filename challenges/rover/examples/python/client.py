@@ -104,7 +104,7 @@ class Robot(object):
     def getNearestNeighbour(fromPoint = None):
         if fromPoint is None:
             fromPoint = self.currentTarget
-        
+
         minDistance = 100000
         nextSucker = None
         for point in self.getNonVisitedGoodPoints():
@@ -129,7 +129,9 @@ class Robot(object):
         distanceToTarge = m.sqrt((xT-self.x)*(xT-self.x)+(yT-self.y)*(yT-self.y))
         self.moveForward(distanceToTarge/CONVERT_COUNT_DIST)
 
-
+    def currentPositionPoint():
+        return [self.x,self.y]
+        
     def getRemainingTime():
         timeSpentInMs = time.time() - self.beginAt
         remainingTime = 120000 - timeSpentInMs

@@ -31,6 +31,11 @@ def getDensityForPoint(totalPoints):
 
     return density
 
-def pointCloserThan(distance, from = (self.x, self.y)):
+def pointCloserThan(distance, fromPoint = None):
+    if fromPoint is None:
+        fromPoint = self.currentPositionPoint()
+
+
     for point in self.getNonVisitedGoodPoints():
-        if ()
+        if (euclidianDistance(fromPoint, point) < distance):
+            
