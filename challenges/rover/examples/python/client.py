@@ -1,6 +1,7 @@
 import paho.mqtt.client as mqtt
 import json
 import math as m
+import numpy as np
 
 SERVER = "127.0.0.1"
 PORT = 1883
@@ -12,6 +13,9 @@ DISTANCE_BETWEEN_WEELS = 25210.14298575622/90
 CONVERT_COUNT_DIST = 3/10
 
 game_data = {}
+goodPoints = numpy.zeros(shape=(45,2))
+badPoints = numpy.zeros(shape=(5,2))
+targetPoint = 0 #index of goodPoints which is the current target
 game_log = []
 i = 0
 
@@ -99,13 +103,13 @@ def on_message(client, userdata, msg):
     if GAME_STATE == 2:
         if(msg.topic == 'robot/state'):
             robot.increment(obj['right_motor'], obj['left_motor'])
-            print(obj)
+
 
         elif (msg.topic == 'players/%s/game' % PLAYER_NAME):
             print("********** STORED GAME_DATA ************")
             game_data = obj
             print(obj['robot'])
-            print(robot.x) 
+            print(robot.x)
             print(robot.y)
             print(robot.angle)
             robot.moveForward(20)
@@ -123,7 +127,7 @@ def on_message(client, userdata, msg):
             GAME_STATE = 2
 
 
-            
+
     elif (GAME_STATE == 0):
         if ((msg.topic=='players/%s/incoming' % PLAYER_NAME) and ("command" in obj)):
                 if (obj['command'] == "start"):
@@ -135,21 +139,28 @@ def on_message(client, userdata, msg):
                     GAME_STATE = 0
                     client.disconnect()
                     exit()
-        
+
 
     i += 1
     if (i>=10):
         i = 0
         with open("data.txt","w") as f: #in write mode
-            f.write("{}".format(game_log)) 
+            f.write("{}".format(game_log))
 
 
 
-
-
-
-
-
+def generateTargets(points):
+    goodCounter = 0
+    badCounter = 0
+    for point in points:
+        if point["score"] == 1:
+            goodPoints[goodCounter] = [point["x"], point["y"]]
+            goodCounter++
+        else:
+            badPoints[badCounter] = [point["x"], point["y"]]
+            badCounter++
+    print("Good points:" + goodPoints)
+    print("Bad points:" + badPoints)
 
 
 if __name__ == '__main__':
