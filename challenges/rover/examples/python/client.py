@@ -24,8 +24,8 @@ class Robot(object):
         self.leftCount = 0
         self.angle = 0
 
-    def moveForward(value):
-        return '{"command": forward", "args": ' + str(value) + '}'
+    def moveForward(self, value):
+        client.publish('robot/process', '{"command": "forward", "args": ' + str(value) + '}', qos=0, retain=False)
 
     def backward(value):
         return '{"command": backward", "args": ' + str(value) + '}'
@@ -105,7 +105,7 @@ def on_message(client, userdata, msg):
             print("********** STORED GAME_DATA ************")
             game_data = obj
             print(obj)
-            client.publish('robot/process', '{"command": "right", "args": 10}', qos=0, retain=False)
+            robot.moveForward(10)
 
             
     elif (GAME_STATE == 0):
