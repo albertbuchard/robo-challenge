@@ -9,11 +9,16 @@ PORT = 1883
 PLAYER_NAME = "TheRegressor"
 
 GAME_STATE = 0 # 0 is waiting, 1 is playing
-DISTANCE_BETWEEN_WEELS = 4.8*180/m.pi
+DISTANCE_BETWEEN_WEELS = 25210.14298575622/90
 CONVERT_COUNT_DIST = 3/10
 game_data = {}
 game_log = []
 i = 0
+
+WAIT_FOR_EXEC_FLAG = False
+targets = range(45)
+
+
 
 class Robot(object):
     """docstring for ClassName"""
@@ -49,15 +54,15 @@ class Robot(object):
         dLeft = vLeft - self.leftCount
         dCenter = (dRight+dLeft)*CONVERT_COUNT_DIST/2
         dAngle = (dLeft-dRight)/DISTANCE_BETWEEN_WEELS
-        self.x = self.x + dCenter*m.cos(dAngle)
-        self.y = self.y + dCenter*m.sin(dAngle)
+        self.x = self.x + dCenter*m.cos(self.angle*m.pi/180)
+        self.y = self.y - dCenter*m.sin(self.angle*m.pi/180)
         self.angle = self.angle + dAngle*180/m.pi
         self.rightCount = vRight
         self.leftCount = vLeft
     
     def getTargetAngle(self, xTarget, yTarget):
         xDiff = self.x - xTarget
-        yDiff = self.x - yTarget
+        yDiff = self.y - yTarget
         targetAngle = math.abs(math.tan(xDiff/yDiff))
         if yDiff > 0:
             if xDiff < 0:
@@ -117,12 +122,20 @@ def on_message(client, userdata, msg):
     global GAME_STATE
     global game_log
     global i
-    
+    global targets
+
     #print(msg.topic)
     obj = json.loads(msg.payload.decode("utf-8"))
     #print(obj)
     
     game_log.append(obj)
+
+
+
+    if GAME_STATE == 2:
+        if(msg.topic == 'robot/state'):
+            robot.increment(obj['right_motor'], obj['left_motor'])
+
     
     
     if GAME_STATE == 1:
@@ -134,14 +147,28 @@ def on_message(client, userdata, msg):
             #print(robot.angle)
             if robot.angle > 200:
                 exit()
-    
+
         elif (msg.topic == 'players/%s/game' % PLAYER_NAME):
             print("********** STORED GAME_DATA ************")
             game_data = obj
             print(obj['robot'])
             print(robot.x)
             print(robot.y)
-            robot.moveForward(10)
+            print(robot.angle)
+            robot.moveForward(20)
+            robot.turnRight(5)
+        '''
+        if WAIT_FOR_EXEC_FLAG:
+            robot.check(targets)
+        else:
+            robot.gotToPoint(targets)
+        '''
+
+    elif GAME_STATE == 1:
+        if (msg.topic == 'players/%s/game' % PLAYER_NAME):
+            #generateTargets(obj['points'])
+            GAME_STATE = 2
+
 
 
 elif (GAME_STATE == 0):
