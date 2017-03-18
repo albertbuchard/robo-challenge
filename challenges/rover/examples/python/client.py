@@ -12,6 +12,9 @@ PLAYER_NAME = "TheRegressor"
 GAME_STATE = 0 # 0 is waiting, 1 is playing
 DISTANCE_BETWEEN_WEELS = 25210.14298575622/90
 CONVERT_COUNT_DIST = 3/10
+goodPoints = numpy.zeros(shape=(45,2))
+badPoints = numpy.zeros(shape=(5,2))
+targetPoint = 0 #index of goodPoints which is the current target
 game_data = {}
 game_log = []
 i = 0
@@ -198,6 +201,18 @@ def on_message(client, userdata, msg):
             f.write("{}".format(game_log))
 
 
+def generateTargets(points):
+    goodCounter = 0
+    badCounter = 0
+    for point in points:
+        if point["score"] == 1:
+            goodPoints[goodCounter] = [point["x"], point["y"]]
+            goodCounter++
+        else:
+            badPoints[badCounter] = [point["x"], point["y"]]
+            badCounter++
+    print("Good points:" + goodPoints)
+    print("Bad points:" + badPoints)
 
 
 
