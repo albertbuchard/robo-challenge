@@ -28,22 +28,22 @@ class Robot(object):
         self.badPoints = []
         self.visitedGoodPoints = []
         self.visitedBadPoints = []
-    
-    
-    
-    
+
+
+
+
     def moveForward(self, value):
         client.publish('robot/process', '{"command": "forward", "args": ' + str(value) + '}', qos=0, retain=False)
-    
+
     def moveBackward(self, value):
         client.publish('robot/process', '{"command": "backward", "args": ' + str(value) + '}', qos=0, retain=False)
-    
+
     def turnRight(self, degree):
         client.publish('robot/process', '{"command": "right", "args": ' + str(degree) + '}', qos=0, retain=False)
-    
+
     def turnLeft(self, degree):
         client.publish('robot/process', '{"command": "left", "args": ' + str(degree) + '}', qos=0, retain=False)
-    
+
     def increment(self, vRight, vLeft):
         dRight = vRight - self.rightCount
         dLeft = vLeft - self.leftCount
@@ -54,7 +54,7 @@ class Robot(object):
         self.angle = self.angle + dAngle*180/m.pi
         self.rightCount = vRight
         self.leftCount = vLeft
-    
+
     def getTargetAngle(self, xTarget, yTarget):
         xDiff = self.x - xTarget
         yDiff = self.x - yTarget
@@ -68,29 +68,29 @@ class Robot(object):
                     else:
                         targetAngle = 180 + targetAngle
         return targetAngle
-            
-                def getNonVisitedGoodPoints():
+
+    def getNonVisitedGoodPoints():
         # loop through positive points
         points = []
         for (index, point) in enumerate(self.goodPoints):
             if index in self.visitedGoodPoints:
                 points.append(point)
             pass
-                
+
     return points
 
-def getNearestNeighbour(fromPoint = [self.x, self.y]):
-    self.currentTarget
-        minDistance = 100000
-        nextSucker = None
-        for point in self.getNonVisitedGoodPoints()):
-            
-            distance= np.sqrt(np.dot((point-fromPoint),(point-fromPoint)))
-                if minDistance < distance:
-                    nextSucker=point
-    
+    def getNearestNeighbour(fromPoint = [self.x, self.y]):
+        self.currentTarget
+            minDistance = 100000
+            nextSucker = None
+            for point in self.getNonVisitedGoodPoints()):
 
-    return nextSucker;
+                distance= np.sqrt(np.dot((point-fromPoint),(point-fromPoint)))
+                    if minDistance < distance:
+                        nextSucker=point
+
+
+        return nextSucker;
 
 
 
@@ -100,7 +100,7 @@ def getNearestNeighbour(fromPoint = [self.x, self.y]):
 # The callback for when the client receives a CONNACK response from the server.
 def on_connect(client, userdata, flags, rc):
     print("Connected with result code " + str(rc))
-    
+
     # Subscribing in on_connect() means that if we lose the connection and
     # reconnect then subscriptions will be renewed.
     client.subscribe('players/' + PLAYER_NAME + '/#')
@@ -117,14 +117,14 @@ def on_message(client, userdata, msg):
     global GAME_STATE
     global game_log
     global i
-    
+
     #print(msg.topic)
     obj = json.loads(msg.payload.decode("utf-8"))
     #print(obj)
-    
+
     game_log.append(obj)
-    
-    
+
+
     if GAME_STATE == 1:
         if msg.topic == 'robot/state':
             robot.increment(obj['right_motor'], obj['left_motor'])
@@ -134,7 +134,7 @@ def on_message(client, userdata, msg):
             #print(robot.angle)
             if robot.angle > 200:
                 exit()
-    
+
         elif (msg.topic == 'players/%s/game' % PLAYER_NAME):
             print("********** STORED GAME_DATA ************")
             game_data = obj
@@ -173,14 +173,14 @@ i += 1
 
 
 if __name__ == '__main__':
-    
+
     robot = Robot()
     client = mqtt.Client()
     client.on_connect = on_connect
     client.on_message = on_message
-    
+
     client.connect(SERVER, PORT, 60)
-    
+
     # Blocking call that processes network traffic, dispatches callbacks and
     # handles reconnecting.
     # Other loop*() functions are available that give a threaded interface and a
