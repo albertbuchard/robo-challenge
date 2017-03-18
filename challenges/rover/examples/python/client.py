@@ -11,16 +11,14 @@ PLAYER_NAME = "TheRegressor"
 GAME_STATE = 0 # 0 is waiting, 1 is playing
 DISTANCE_BETWEEN_WEELS = 25210.14298575622/90
 CONVERT_COUNT_DIST = 3/10
-
 game_data = {}
-goodPoints = numpy.zeros(shape=(45,2))
-badPoints = numpy.zeros(shape=(5,2))
-targetPoint = 0 #index of goodPoints which is the current target
 game_log = []
 i = 0
 
 WAIT_FOR_EXEC_FLAG = False
 targets = range(45)
+
+
 
 class Robot(object):
     """docstring for ClassName"""
@@ -30,19 +28,27 @@ class Robot(object):
         self.rightCount = 0
         self.leftCount = 0
         self.angle = 0
-
+        self.currentTarget = {}
+        self.goodPoints = []
+        self.badPoints = []
+        self.visitedGoodPoints = []
+        self.visitedBadPoints = []
+    
+    
+    
+    
     def moveForward(self, value):
         client.publish('robot/process', '{"command": "forward", "args": ' + str(value) + '}', qos=0, retain=False)
-
+    
     def moveBackward(self, value):
         client.publish('robot/process', '{"command": "backward", "args": ' + str(value) + '}', qos=0, retain=False)
-
+    
     def turnRight(self, degree):
         client.publish('robot/process', '{"command": "right", "args": ' + str(degree) + '}', qos=0, retain=False)
-
+    
     def turnLeft(self, degree):
         client.publish('robot/process', '{"command": "left", "args": ' + str(degree) + '}', qos=0, retain=False)
-
+    
     def increment(self, vRight, vLeft):
         dRight = vRight - self.rightCount
         dLeft = vLeft - self.leftCount
@@ -53,7 +59,7 @@ class Robot(object):
         self.angle = self.angle + dAngle*180/m.pi
         self.rightCount = vRight
         self.leftCount = vLeft
-
+    
     def getTargetAngle(self, xTarget, yTarget):
         xDiff = self.x - xTarget
         yDiff = self.y - yTarget
@@ -62,18 +68,44 @@ class Robot(object):
             if xDiff < 0:
                 targetAngle = 360 - targetAngle
         else:
-             if xDiff > 0:
-                 targetAngle = 180 - targetAngle
-             else:
-                 targetAngle = 180 + targetAngle
+            if xDiff > 0:
+                targetAngle = 180 - targetAngle
+                    else:
+                        targetAngle = 180 + targetAngle
         return targetAngle
+            
+                def getNonVisitedGoodPoints():
+        # loop through positive points
+        points = []
+        for (index, point) in enumerate(self.goodPoints):
+            if index in self.visitedGoodPoints:
+                points.append(point)
+            pass
+                
+    return points
+
+def getNearestNeighbour(fromPoint = [self.x, self.y]):
+    self.currentTarget
+        minDistance = 100000
+        nextSucker = None
+        for point in self.getNonVisitedGoodPoints()):
+            
+            distance= np.sqrt(np.dot((point-fromPoint),(point-fromPoint)))
+                if minDistance < distance:
+                    nextSucker=point
+    
+
+    return nextSucker;
+
+
+
 
 
 
 # The callback for when the client receives a CONNACK response from the server.
 def on_connect(client, userdata, flags, rc):
     print("Connected with result code " + str(rc))
-
+    
     # Subscribing in on_connect() means that if we lose the connection and
     # reconnect then subscriptions will be renewed.
     client.subscribe('players/' + PLAYER_NAME + '/#')
@@ -95,7 +127,7 @@ def on_message(client, userdata, msg):
     #print(msg.topic)
     obj = json.loads(msg.payload.decode("utf-8"))
     #print(obj)
-
+    
     game_log.append(obj)
 
 
@@ -103,6 +135,18 @@ def on_message(client, userdata, msg):
     if GAME_STATE == 2:
         if(msg.topic == 'robot/state'):
             robot.increment(obj['right_motor'], obj['left_motor'])
+
+    
+    
+    if GAME_STATE == 1:
+        if msg.topic == 'robot/state':
+            robot.increment(obj['right_motor'], obj['left_motor'])
+            #print(obj)
+            #print(robot.x)
+            #print(robot.y)
+            #print(robot.angle)
+            if robot.angle > 200:
+                exit()
 
         elif (msg.topic == 'players/%s/game' % PLAYER_NAME):
             print("********** STORED GAME_DATA ************")
@@ -127,11 +171,11 @@ def on_message(client, userdata, msg):
 
 
 
-    elif (GAME_STATE == 0):
-        if ((msg.topic=='players/%s/incoming' % PLAYER_NAME) and ("command" in obj)):
-                if (obj['command'] == "start"):
-                    print("********** RECEIVED START FROM SERVER ************")
-                    client.publish('players/' + PLAYER_NAME , '{"command": "start"}')
+elif (GAME_STATE == 0):
+    if ((msg.topic=='players/%s/incoming' % PLAYER_NAME) and ("command" in obj)):
+        if (obj['command'] == "start"):
+            print("********** RECEIVED START FROM SERVER ************")
+                client.publish('players/' + PLAYER_NAME , '{"command": "start"}')
                     GAME_STATE = 1
                 elif (obj['command'] == "finished"):
                     print("********** RECEIVED FINISHED FROM SERVER ************")
@@ -140,7 +184,7 @@ def on_message(client, userdata, msg):
                     exit()
 
 
-    i += 1
+i += 1
     if (i>=10):
         i = 0
         with open("data.txt","w") as f: #in write mode
@@ -148,29 +192,22 @@ def on_message(client, userdata, msg):
 
 
 
-def generateTargets(points):
-    goodCounter = 0
-    badCounter = 0
-    for point in points:
-        if point["score"] == 1:
-            goodPoints[goodCounter] = [point["x"], point["y"]]
-            goodCounter++
-        else:
-            badPoints[badCounter] = [point["x"], point["y"]]
-            badCounter++
-    print("Good points:" + goodPoints)
-    print("Bad points:" + badPoints)
+
+
+
+
+
 
 
 if __name__ == '__main__':
-
+    
     robot = Robot()
     client = mqtt.Client()
     client.on_connect = on_connect
     client.on_message = on_message
-
+    
     client.connect(SERVER, PORT, 60)
-
+    
     # Blocking call that processes network traffic, dispatches callbacks and
     # handles reconnecting.
     # Other loop*() functions are available that give a threaded interface and a
