@@ -9,19 +9,18 @@ PORT = 1883
 
 PLAYER_NAME = "TheRegressor"
 
-GAME_STATE = 0 # 0 is waiting, 1 is playing
-DISTANCE_BETWEEN_WEELS = 25210.14298575622/90
+DISTANCE_BETWEEN_WHEELS = 25210.14298575622/90
 CONVERT_COUNT_DIST = 3/10
 goodPoints = numpy.zeros(shape=(45,2))
 badPoints = numpy.zeros(shape=(5,2))
-targetPoint = 0 #index of goodPoints which is the current target
+targetIndices = list(range(45)) #can be reordered
+lastPoints
+targetAngle = 0
 game_data = {}
 game_log = []
 i = 0
 
 WAIT_FOR_EXEC_FLAG = False
-targets = range(45)
-
 
 
 class Robot(object):
@@ -32,14 +31,8 @@ class Robot(object):
         self.rightCount = 0
         self.leftCount = 0
         self.angle = 0
-        self.currentTarget = {}
-        self.goodPoints = []
-        self.badPoints = []
-        self.visitedGoodPoints = []
-        self.visitedBadPoints = []
 
         self.beginAt = time.time()
-
 
 
     # Mouvements
@@ -55,7 +48,7 @@ class Robot(object):
     def turnLeft(self, degree):
         client.publish('robot/process', '{"command": "left", "args": ' + str(degree) + '}', qos=0, retain=False)
 
-    def increment(self, vRight, vLeft):
+    def setOdometry(self, vRight, vLeft):
         dRight = vRight - self.rightCount
         dLeft = vLeft - self.leftCount
         dCenter = (dRight+dLeft)*CONVERT_COUNT_DIST/2
@@ -70,7 +63,7 @@ class Robot(object):
     def getTargetAngle(self, xTarget, yTarget):
         xDiff = self.x - xTarget
         yDiff = self.y - yTarget
-        targetAngle = abs(m.tan(xDiff/yDiff))
+        targetAngle = abs(m.atan(yDiff/xDiff))
         if yDiff > 0:
             if xDiff < 0:
                 targetAngle = 360 - targetAngle
@@ -79,43 +72,44 @@ class Robot(object):
                 targetAngle = 180 - targetAngle
             else:
                 targetAngle = 180 + targetAngle
-        return targetAngle
 
-
-    # Path finding
-    def getNonVisitedGoodPoints():
-        # loop through positive points
-        points = []
-        for (index, point) in enumerate(self.goodPoints):
-            if index in self.visitedGoodPoints:
-                points.append(point)
-            pass
-
-        return points
-
-    def getNearestNeighbour(fromPoint = [self.x, self.y]):
+    def getNearestNeighbour():
         # self.currentTarget
+        startingPoint = [self.x, self.y]
         minDistance = 100000
         nextSucker = None
-        for point in self.getNonVisitedGoodPoints():
-            distance = np.sqrt(np.dot((point-fromPoint),(point-fromPoint)))
-            if minDistance > distance:
-                nextSucker=point
-                minDistance=distance
+        for index in targetIndices:
+            distance = np.sqrt(np.dot((goodPoints[index]-fromPoint),(goodPoints[index]-startingPoint)))
+            if distance < minDistance:
+                nextSucker = point
+                minDistance = distance
 
         return nextSucker;
 
 
-    def gotToPoint(self):
-        xT = 1000
-        yT = 900
-        aT = self.getTargetAngle(xT,yT)
+    def checkArrival(points):
+        goodCounter2 = 0
+        for point in points:
+            if points[i]["score"] == 1:
+                goodCounter2 += 1
+                if points[i]["collected"] != lastPoints[i]["collected"]:
+                    list(filter((goodCounter2).__ne__, targetIndices))
+                    setNextPath()
+        lastPoints = points
+
+    def setNextPath():
+        xT = goodPoints[targetIndices[0]][0]
+        yT = goodPoints[targetIndices[0]][1]
+        self.setTargetAngle(xT,yT)
         print('angle To Point')
-        print(aT)
-        self.turnRight((aT-self.angle)%360)
+        print(targetAngle)
+        self.turnRight((targetAngle-self.angle)%360)
         distanceToTarge = m.sqrt((xT-self.x)*(xT-self.x)+(yT-self.y)*(yT-self.y))
         self.moveForward(distanceToTarge/CONVERT_COUNT_DIST)
 
+    def checkHeading(self):
+        if abs(self.angle - targetAngle) > 5:
+            setNextPath()
 
     def getRemainingTime():
         timeSpentInMs = time.time() - self.beginAt
@@ -126,9 +120,18 @@ class Robot(object):
 
         return remainingTime
 
-
-
-
+def generateTargets(points):
+    goodCounter = 0
+    badCounter = 0
+    for point in points:
+        if point["score"] == 1:
+            goodPoints[goodCounter] = [point["x"], point["y"]]
+            goodCounter += 1
+        else:
+            badPoints[badCounter] = [point["x"], point["y"]]
+            badCounter += 1
+    print("Good points:" + goodPoints)
+    print("Bad points:" + badPoints)
 
 
 # The callback for when the client receives a CONNACK response from the server.
@@ -145,13 +148,12 @@ def on_connect(client, userdata, flags, rc):
     client.publish('players/' + PLAYER_NAME , '{"command": "register"}')
 
 
-
+GAME_STATE = 0 # 0 is waiting, 1 is playing
+firstState = True
 # The callback for when a PUBLISH message is received from the server.
 def on_message(client, userdata, msg):
-    global GAME_STATE
     global game_log
     global i
-    global targets
     global WAIT_FOR_EXEC_FLAG
 
     #print(msg.topic)
@@ -163,23 +165,24 @@ def on_message(client, userdata, msg):
 
     if GAME_STATE == 2:
         if msg.topic == 'robot/state':
-            robot.increment(obj['right_motor'], obj['left_motor'])
-            #print(obj)
-            #print(robot.x)
-            #print(robot.y)
-            #print(robot.angle)
-            if robot.angle > 200:
-                exit()
+            robot.setOdometry(obj['right_motor'], obj['left_motor'])
+            if counter == 0:
+                robot.setNextPath()
+                firstState = False
+            robot.checkHeading()
 
         elif (msg.topic == 'players/%s/game' % PLAYER_NAME):
             print("********** STORED GAME_DATA ************")
-            game_data = obj
-            print(obj['robot'])
-            print(robot.x)
-            print(robot.y)
-            print(robot.angle)
-            robot.moveForward(20)
-            robot.turnRight(5)
+            robot.checkArrival(obj['points'])
+
+
+            # game_data = obj
+            # print(obj['robot'])
+            # print(robot.x)
+            # print(robot.y)
+            # print(robot.angle)
+            # robot.moveForward(20)
+            # robot.turnRight(5)
 
 
 
@@ -194,7 +197,7 @@ def on_message(client, userdata, msg):
 
     elif GAME_STATE == 1:
         if (msg.topic == 'players/%s/game' % PLAYER_NAME):
-            #generateTargets(obj['points'])
+            generateTargets(obj['points'])
             GAME_STATE = 2
 
 
@@ -217,25 +220,6 @@ def on_message(client, userdata, msg):
         i = 0
         with open("data.txt","w") as f: #in write mode
             f.write("{}".format(game_log))
-
-
-def generateTargets(points):
-    goodCounter = 0
-    badCounter = 0
-    for point in points:
-        if point["score"] == 1:
-            goodPoints[goodCounter] = [point["x"], point["y"]]
-            goodCounter += 1
-        else:
-            badPoints[badCounter] = [point["x"], point["y"]]
-            badCounter += 1
-    print("Good points:" + goodPoints)
-    print("Bad points:" + badPoints)
-
-
-
-
-
 
 
 
