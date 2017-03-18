@@ -27,15 +27,25 @@ def on_connect(client, userdata, flags, rc):
 # The callback for when a PUBLISH message is received from the server.
 def on_message(client, userdata, msg):
     global GAME_STATE
-    print(msg.topic) 
+    print(msg.topic)
     obj = json.loads(msg.payload.decode("utf-8"))
-    print(obj) 
+    print(obj)
     if GAME_STATE == 1:
+        xDiff = obj["robot"]["x"] - obj["points"]["x"]
+        yDiff = obj["robot"]["y"] - obj["points"]["y"]
+        targetAngle = math.abs(math.tan(xDiff/yDiff))
+        if yDiff > 0:
+            if xDiff < 0:
+                targetAngle = 360 - targetAngle
+        else:
+             if xDiff > 0:
+                 targetAngle = 180 - targetAngle
+             else:
+                 targetAngle = 180 + targetAngle
         client.publish('robot/process', '{"command": "forward", "args": 600}')
     elif (GAME_STATE == 0) and (msg.topic=='players/foo/incoming'):
         client.publish('players/' + PLAYER_NAME , '{"command": "start"}')
         GAME_STATE = GAME_STATE + 1
-
 
     #client.publish('players/' + PLAYER_NAME , '{"command": "backward", "args": 100}', qos=0, retain=False)
 
