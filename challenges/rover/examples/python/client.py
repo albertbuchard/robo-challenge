@@ -5,10 +5,14 @@ import math as m
 SERVER = "127.0.0.1"
 PORT = 1883
 
-PLAYER_NAME = "foo"
+PLAYER_NAME = "TheRegressor"
 
 GAME_STATE = 0 # 0 is waiting, 1 is playing
 DISTANCE_BETWEEN_WEELS = 4.8
+
+game_data = {}
+game_log = []
+i = 0
 
 
 class Robot(object):
@@ -58,6 +62,7 @@ class Robot(object):
         return targetAngle
 
 
+
 # The callback for when the client receives a CONNACK response from the server.
 def on_connect(client, userdata, flags, rc):
     print("Connected with result code " + str(rc))
@@ -76,10 +81,15 @@ def on_connect(client, userdata, flags, rc):
 # The callback for when a PUBLISH message is received from the server.
 def on_message(client, userdata, msg):
     global GAME_STATE
-    
-    #print(msg.topic) 
+    global game_log
+    global i
+
+    print(msg.topic)
     obj = json.loads(msg.payload.decode("utf-8"))
-    #print(obj) 
+    print(obj)
+
+    game_log.append(obj)
+
 
     if GAME_STATE == 1:
         if msg.topic == 'robot/state':
@@ -91,16 +101,31 @@ def on_message(client, userdata, msg):
             if robot.angle > 200:
                 exit()
             
-
-        if msg.topic == 'players/foo/game':
+        elif (msg.topic == 'players/%s/game' % PLAYER_NAME):
+            print("********** STORED GAME_DATA ************")
+            game_data = obj
             print(obj)
             robot.moveForward(10)
+
+            
+    elif (GAME_STATE == 0):
+        if ((msg.topic=='players/%s/incoming' % PLAYER_NAME) and ("command" in obj)):
+                if (obj['command'] == "start"):
+                    print("********** RECEIVED START FROM SERVER ************")
+                    client.publish('players/' + PLAYER_NAME , '{"command": "start"}')
+                    GAME_STATE = 1
+                elif (obj['command'] == "finished"):
+                    print("********** RECEIVED FINISHED FROM SERVER ************")
+                    GAME_STATE = 0
+                    client.disconnect()
+                    exit()
         
-        
-    elif (GAME_STATE == 0) and (msg.topic=='players/foo/incoming'):
-        client.publish('players/' + PLAYER_NAME , '{"command": "start"}')
-        GAME_STATE = GAME_STATE + 1
-    
+
+    i += 1
+    if (i>=10):
+        i = 0
+        with open("data.txt","w") as f: #in write mode
+            f.write("{}".format(game_log)) 
 
     #client.publish('players/' + PLAYER_NAME , '{"command": "backward", "args": 100}', qos=0, retain=False)
 
