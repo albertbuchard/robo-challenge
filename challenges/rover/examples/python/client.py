@@ -4,6 +4,7 @@ import math as m
 import numpy as np
 import time
 
+#SERVER = "10.10.10.30"
 SERVER = "127.0.0.1"
 PORT = 1883
 
@@ -20,7 +21,9 @@ game_log = []
 i = 0
 
 WAIT_FOR_EXEC_FLAG = False
-targets = range(45)
+targets = []
+obstacles = []
+coordT = []
 
 
 
@@ -64,6 +67,9 @@ class Robot(object):
     def turnLeft(self, degree):
         client.publish('robot/process', '{"command": "left", "args": ' + str(degree) + '}', qos=0, retain=False)
 
+    def stop(self):
+        client.publish('robot/process', '{"command": "stop"}', qos=0, retain=False)
+
     def increment(self, vRight, vLeft):
         dRight = vRight - self.rightCount
         dLeft = vLeft - self.leftCount
@@ -75,28 +81,45 @@ class Robot(object):
         self.rightCount = vRight
         self.leftCount = vLeft
 
-    # Trig functions
-    def getTargetAngle(self, xTarget, yTarget, degrees = True):
-        xDiff = self.x - xTarget
-        yDiff = self.y - yTarget
-        targetAngle = abs(m.tan(xDiff/yDiff))
-        if yDiff > 0:
-            if xDiff < 0:
-                targetAngle = 360 - targetAngle
-        else:
-            if xDiff > 0:
-                targetAngle = 180 - targetAngle
-            else:
-                targetAngle = 180 + targetAngle
+    def updateCoord(self, coordDict):
+        self.x = coordDict['x']
+        self.y = coordDict['y']
 
-        if degrees == True:
-            return targetAngle
-        else:
-            return self.degreeToRadians(targetAngle)
+    def updateAngle(self, angle):
+        self.angle = angle
+
+    def checkArrival(self,coord):
+        global WAIT_FOR_EXEC_FLAG
+        global targets
+        global coordT
+        print((self.x-coord[0])*(self.x-coord[0]) + (self.y-coord[1])*(self.y-coord[1]))
+        if (self.x-coord[0])*(self.x-coord[0]) + (self.y-coord[1])*(self.y-coord[1]) < 100:
+            coordT = targets.pop()
+            WAIT_FOR_EXEC_FLAG = False
+
+
+
+    # Trig functions
 
     def degreeToRadians(degrees):
         return degrees * 0.17
 
+    def getTargetAngle(self, xTarget, yTarget):
+        xDiff = xTarget - self.x
+        yDiff = yTarget - self.y
+        if xDiff == 0:
+            if yDiff == 0:
+                targetAngle = 0
+            else:
+                targetAngle = np.sign(yDiff)*90
+        else:
+            targetAngle = m.atan(yDiff/xDiff)*180/m.pi
+            if xDiff < 0 :
+                targetAngle = np.sign(yDiff)*180 + targetAngle
+        return (-targetAngle)
+
+
+    '''
     # Path finding
     def getNonVisitedGoodPoints(self):
         # loop through positive points
@@ -117,35 +140,35 @@ class Robot(object):
         for point in self.getNonVisitedGoodPoints():
             distance= np.sqrt(np.dot((point-fromPoint),(point-fromPoint)))
             if minDistance < distance:
+
                 nextSucker=point
+                minDistance=distance
 
         return nextSucker;
- 
-    def gotToPoint(self,self):
-        xT = 1000
-        yT = 900
-        aT = self.getTargetAngle(xT,yT)
-        print('angle To Point')
+
+    '''
+
+    def gotToPoint(self, coordT):
+        robot.stop()
+        xT = coordT[0]
+        yT = coordT[1]
+        aT = robot.getTargetAngle(xT,yT)
+        #print('angle To Point')
+        print(robot.x)
+        print(robot.y)
+        print(robot.angle)
+
         print(aT)
-        self.turnRight((aT-self.angle)%360)
-        distanceToTarge = m.sqrt((xT-self.x)*(xT-self.x)+(yT-self.y)*(yT-self.y))
-        self.moveForward(distanceToTarge/CONVERT_COUNT_DIST)
-
-    def getRemainingTime(self):
-        timeSpentInMs = time.time() - self.beginAt
-        remainingTime = 120000 - timeSpentInMs
-
-        if remainingTime < 0:
-            remainingTime = 0
-
-        return remainingTime
-
-    def remainingDistance(self):
-        return(self.speed*(self.getRemainingTime()/1000))
-
-
-
-
+        print((aT-robot.angle)%360)
+        if (aT-robot.angle)%360<180:
+            print(abs(int((aT-robot.angle)%360)))
+            robot.turnRight(abs(int((aT-robot.angle)%360)))
+        else:
+            print(abs(int((aT-robot.angle)%360-360)))
+            robot.turnLeft(abs(int((aT-robot.angle)%360-360)))
+        #robot.turnLeft(90)
+        distanceToTarge = m.sqrt((xT-robot.x)*(xT-robot.x)+(yT-robot.y)*(yT-robot.y))
+        robot.moveForward(int(distanceToTarge/CONVERT_COUNT_DIST))
 
 
 # The callback for when the client receives a CONNACK response from the server.
@@ -170,6 +193,7 @@ def on_message(client, userdata, msg):
     global i
     global targets
     global WAIT_FOR_EXEC_FLAG
+    global coordT
 
     #print(msg.topic)
     obj = json.loads(msg.payload.decode("utf-8"))
@@ -181,39 +205,37 @@ def on_message(client, userdata, msg):
     if GAME_STATE == 2:
         if msg.topic == 'robot/state':
             robot.increment(obj['right_motor'], obj['left_motor'])
-            #print(obj)
-            #print(robot.x)
-            #print(robot.y)
-            #print(robot.angle)
-            if robot.angle > 200:
-                exit()
+            robot.updateAngle(obj['angle'])
 
         elif (msg.topic == 'players/%s/game' % PLAYER_NAME):
             print("********** STORED GAME_DATA ************")
             game_data = obj
-            print(obj['robot'])
-            print(robot.x)
-            print(robot.y)
-            print(robot.angle)
-            robot.moveForward(20)
-            robot.turnRight(5)
 
+            print(coordT)
+            #print(WAIT_FOR_EXEC_FLAG)
+            # print(obj['robot'])
+            # print(robot.x)
+            # print(robot.y)
+            # print(robot.angle)
+            robot.updateCoord(obj['robot'])
 
+            '''
+            if WAIT_FOR_EXEC_FLAG:
+                robot.checkArrival(coordT)
+            else:
+                coordT = targets.pop()
+                robot.gotToPoint(coordT)
+                WAIT_FOR_EXEC_FLAG = True
+            '''
 
-        if WAIT_FOR_EXEC_FLAG:
-            pass
-            #robot.check()
-        else:
-            robot.gotToPoint()
-            WAIT_FOR_EXEC_FLAG = True
-
-
-
+            robot.gotToPoint(coordT)
+            robot.checkArrival(coordT) 
+            
     elif GAME_STATE == 1:
         if (msg.topic == 'players/%s/game' % PLAYER_NAME):
-            #generateTargets(obj['points'])
+            generateTargetsAndObstacles(obj['points'])
+            coordT = targets.pop()
             GAME_STATE = 2
-
 
 
     elif (GAME_STATE == 0):
@@ -236,18 +258,17 @@ def on_message(client, userdata, msg):
             f.write("{}".format(game_log))
 
 
-def generateTargets(points):
-    goodCounter = 0
-    badCounter = 0
+def generateTargetsAndObstacles(points):
+    global targets
+    global obstacles
     for point in points:
-        if point["score"] == 1:
-            goodPoints[goodCounter] = [point["x"], point["y"]]
-            goodCounter += 1
+        if point['score'] == 1:
+            targets.append([point['x'], point['y']])
         else:
-            badPoints[badCounter] = [point["x"], point["y"]]
-            badCounter += 1
-    print("Good points:" + goodPoints)
-    print("Bad points:" + badPoints)
+            obstacles.append([point['x'], point['y']])
+    print(targets)
+    print(obstacles)
+
 
 
 
