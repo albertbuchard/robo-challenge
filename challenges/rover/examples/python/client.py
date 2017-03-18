@@ -42,8 +42,20 @@ class Robot(object):
         self.angle = self.angle + dAngle
         self.rightCount = vRight
         self.leftCount = vLeft
-        
 
+    def getTargetAngle(self, xTarget, yTarget):
+        xDiff = self.x - xTarget
+        yDiff = self.x - yTarget
+        targetAngle = math.abs(math.tan(xDiff/yDiff))
+        if yDiff > 0:
+            if xDiff < 0:
+                targetAngle = 360 - targetAngle
+        else:
+             if xDiff > 0:
+                 targetAngle = 180 - targetAngle
+             else:
+                 targetAngle = 180 + targetAngle
+        return targetAngle
 
 
 # The callback for when the client receives a CONNACK response from the server.
@@ -85,11 +97,14 @@ def on_message(client, userdata, msg):
             client.publish('robot/process', '{"command": "right", "args": 10}', qos=0, retain=False)
 
 
+    if GAME_STATE == 1:
+        client.publish('robot/process', '{"command": "forward", "args": 600}')
+        
+        
     elif (GAME_STATE == 0) and (msg.topic=='players/foo/incoming'):
         client.publish('players/' + PLAYER_NAME , '{"command": "start"}')
         GAME_STATE = GAME_STATE + 1
     
-
 
     #client.publish('players/' + PLAYER_NAME , '{"command": "backward", "args": 100}', qos=0, retain=False)
 
