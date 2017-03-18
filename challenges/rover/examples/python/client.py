@@ -27,6 +27,8 @@ coordT = []
 
 
 
+
+
 class Robot(object):
     """docstring for ClassName"""
     def __init__(self):
@@ -42,6 +44,13 @@ class Robot(object):
         self.visitedBadPoints = []
 
         self.beginAt = time.time()
+
+        self.speed = 49 # pt per sec
+        self.angularSpeed = 0.62 # radian/s
+        self.angularSpeedDegree = 36 # degree per sec
+
+        self.max_x = 1280
+        self.max_y = 960
 
 
 
@@ -91,6 +100,10 @@ class Robot(object):
 
 
     # Trig functions
+
+    def degreeToRadians(degrees):
+        return degrees * 0.17
+
     def getTargetAngle(self, xTarget, yTarget):
         xDiff = xTarget - self.x
         yDiff = yTarget - self.y
@@ -105,9 +118,10 @@ class Robot(object):
                 targetAngle = np.sign(yDiff)*180 + targetAngle
         return (-targetAngle)
 
+
     '''
     # Path finding
-    def getNonVisitedGoodPoints():
+    def getNonVisitedGoodPoints(self):
         # loop through positive points
         points = []
         for (index, point) in enumerate(self.goodPoints):
@@ -117,17 +131,21 @@ class Robot(object):
 
         return points
 
-    def getNearestNeighbour(fromPoint = [self.x, self.y]):
-        # self.currentTarget
+    def getNearestNeighbour(self, fromPoint = None):
+        if fromPoint is None:
+            fromPoint = self.currentTarget
+
         minDistance = 100000
         nextSucker = None
         for point in self.getNonVisitedGoodPoints():
-            distance = np.sqrt(np.dot((point-fromPoint),(point-fromPoint)))
-            if minDistance > distance:
+            distance= np.sqrt(np.dot((point-fromPoint),(point-fromPoint)))
+            if minDistance < distance:
+
                 nextSucker=point
                 minDistance=distance
 
         return nextSucker;
+
     '''
 
     def gotToPoint(self, coordT):
@@ -139,33 +157,18 @@ class Robot(object):
         print(robot.x)
         print(robot.y)
         print(robot.angle)
+
         print(aT)
         print((aT-robot.angle)%360)
         if (aT-robot.angle)%360<180:
             print(abs(int((aT-robot.angle)%360)))
             robot.turnRight(abs(int((aT-robot.angle)%360)))
-
         else:
             print(abs(int((aT-robot.angle)%360-360)))
             robot.turnLeft(abs(int((aT-robot.angle)%360-360)))
         #robot.turnLeft(90)
         distanceToTarge = m.sqrt((xT-robot.x)*(xT-robot.x)+(yT-robot.y)*(yT-robot.y))
         robot.moveForward(int(distanceToTarge/CONVERT_COUNT_DIST))
-
-
-    '''
-    def getRemainingTime():
-        timeSpentInMs = time.time() - self.beginAt
-        remainingTime = 120000 - timeSpentInMs
-
-        if remainingTime < 0:
-            remainingTime = 0
-
-        return remainingTime
-
-
-    '''
-
 
 
 # The callback for when the client receives a CONNACK response from the server.
@@ -226,13 +229,8 @@ def on_message(client, userdata, msg):
             '''
 
             robot.gotToPoint(coordT)
-            robot.checkArrival(coordT)
-
-
-
-
-        
-
+            robot.checkArrival(coordT) 
+            
     elif GAME_STATE == 1:
         if (msg.topic == 'players/%s/game' % PLAYER_NAME):
             generateTargetsAndObstacles(obj['points'])
