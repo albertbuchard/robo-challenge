@@ -42,6 +42,7 @@ class Robot(object):
         self.badPoints = []
         self.visitedGoodPoints = []
         self.visitedBadPoints = []
+        self.targetList = []
 
         self.beginAt = time.time()
 
@@ -93,9 +94,11 @@ class Robot(object):
         global WAIT_FOR_EXEC_FLAG
         global targets
         global coordT
+
         print((self.x-coord[0])*(self.x-coord[0]) + (self.y-coord[1])*(self.y-coord[1]))
         if (self.x-coord[0])*(self.x-coord[0]) + (self.y-coord[1])*(self.y-coord[1]) < 100:
             coordT = targets.pop()
+            #self.currentTargetIndex += 1
             WAIT_FOR_EXEC_FLAG = False
 
 
@@ -119,6 +122,23 @@ class Robot(object):
                 targetAngle = np.sign(yDiff)*180 + targetAngle
         return (-targetAngle)
 
+    def getAngleBetweenAB(self, A, B = None):
+        if B is None:
+            B = self.currentPositionPoint()
+
+        xDiff = A[0] - B[0]
+        yDiff = A[1] - B[1]
+
+        if xDiff == 0:
+            if yDiff == 0:
+                targetAngle = 0
+            else:
+                targetAngle = np.sign(yDiff)*90
+        else:
+            targetAngle = m.atan(yDiff/xDiff)*180/m.pi
+            if xDiff < 0 :
+                targetAngle = np.sign(yDiff)*180 + targetAngle
+        return (-targetAngle)
 
 
     # Path finding
@@ -182,23 +202,26 @@ class Robot(object):
                     travelTime = self.travelTime(point)
                     valueForPoint = self.valueFunction(point, None, travelTime)
 
-                    frontier[index] = {leafPosition: index, value: valueForPoint, path:[index], travelTime: travelTime, nextDistances:{}}
+                    frontier[index] = {'leafPosition': index, 'value': valueForPoint, 'path':[index], 'travelTime': travelTime, 'nextDistances':{}}
                     if (valueForPoint < minValueForPoint):
                         bestNext = index
-            list.append(bestNext)
+            listPosition.append(bestNext)
         else:
             minTravelTime = 100000
             minValueForPoint = 100000
             for (frontierIndex,frontierData) in frontier.items(): # TODO cache the results
                 for (index, value) in enumerate(self.goodPoints):
                     if ((index not in listPosition) and (index not in self.visitedGoodPoints)):
-                        if (index in hasattr(frontierData['nextDistances'], index)):
+                        if (hasattr(frontierData['nextDistances'], str(index))):
+                            travelTime = frontierData['nextDistances'][index]['travelTime']
+                            valueForPoint = frontierData['nextDistances'][index]['valueForPoint']
+
+                        else:
+                            print(frontier)
                             travelTime = fromPoint.travelTime + self.travelTime(point, self.goodPoints[frontierData.leafPosition])
                             valueForPoint = fromPoint.value + self.valueFunction(point, fromPoint, travelTime)
                             frontier[frontierIndex]['nextDistances'][index] = {travelTime: travelTime, valueForPoint: valueForPoint}
-                        else:
-                            travelTime = frontierData['nextDistances'][index]['travelTime']
-                            valueForPoint = frontierData['nextDistances'][index]['valueForPoint']
+                        
 
                         #frontier.append()
                         if (valueForPoint < minValueForPoint):
@@ -210,19 +233,19 @@ class Robot(object):
                         if (travelTime < minTravelTime):
                             minTravelTime = travelTime
 
-            list.append(bestNext)
+            listPosition.append(bestNext)
             newPath = frontier[bestFrontiere]['path'].append(bestNext)
 
-            frontier[bestFrontiere] = {leafPosition: bestNext,
-            value: valueForPoint,
-            path: newPath,
-            travelTime: frontier[bestFrontiere]['travelTime'] + bestTravelTime,
-            nextDistances: {}}
+            frontier[bestFrontiere] = {'leafPosition': bestNext,
+            'value': valueForPoint,
+            'path': newPath,
+            'travelTime': frontier[bestFrontiere]['travelTime'] + bestTravelTime,
+            'nextDistances': {}}
 
         if (travelTime > self.maxDuration):
-            return list
+            return listPosition
         else:
-            return bStarExpend(frontier, listPosition)
+            return self.bStarExpend(frontier, listPosition)
 
     def getNonVisitedGoodPointsIndex(self):
         # loop through positive points TODO replace by array of non visited
@@ -237,7 +260,7 @@ class Robot(object):
 
 
     # Value function
-    def valueFunction(forPoint, fromPoint, travelTime = None):
+    def valueFunction(self, forPoint, fromPoint = None, travelTime = None):
         if (travelTime is None):
             travelTime = self.travelTime(point, fromPoint)
 
@@ -245,7 +268,7 @@ class Robot(object):
 
         return V
 
-    def travelTime(forPoint, fromPoint):
+    def travelTime(self, forPoint, fromPoint = None):
         V = self.timeToTurnTo(forPoint, fromPoint) + self.timeToGoTo(forPoint, fromPoint)
 
         return V
@@ -255,15 +278,15 @@ class Robot(object):
         if fromPoint is None:
             fromPoint = self.currentPositionPoint()
 
-        return self.euclidianDistance(target - fromPoint)/self.speed
+        return self.euclidianDistance(target,fromPoint)/self.speed
 
     def timeToTurnTo(self, point, fromPoint = None):
         if fromPoint is None:
             fromPoint = self.currentPositionPoint()
 
-        angle = self.getTargetAngle(point, fromPoint)
+        angle = self.getAngleBetweenAB(point, fromPoint)
 
-        return (angle / angularSpeed)
+        return (angle / self.angularSpeed)
 
     def approximateTimeToExploreAera(self,center, distance = None):
         # based on a model of identically distributed targets in the aeras
@@ -280,11 +303,13 @@ class Robot(object):
         remainingPoints = 45 - len(self.visitedGoodPoints) # TODO replace by number of points
         vicinityPoint = self.pointCloserThan(self.remainingDistance(), center)
 
-        return self.averageDistanceForDensity(self.remainingDensityForPoint(center))*(remainingPoints - vicinityPoint)
+        remainingDensity = self.remainingDensityForPoint(center)
+
+        return self.averageDistanceForDensity(remainingDensity)*(remainingPoints - len(vicinityPoint))
 
 
     # Density
-    def averageDistanceForDensity(density):
+    def averageDistanceForDensity(self, density):
         # assuming flat distribution over the surface
         return np.sqrt(1/density)
 
@@ -328,7 +353,7 @@ class Robot(object):
         return (len(vicinityPoint)/remainingPoints)
 
     def remainingDensityForPoint(self, center = None):
-        return 1 - getDensityForPoint(center)
+        return 1 - self.getDensityForPoint(center)
 
 
     def pointCloserThan(self, distance, fromPoint = None):
@@ -350,7 +375,7 @@ class Robot(object):
         B = np.array(B)
         return(np.sqrt(np.dot((A-B),(A-B))))
 
-    def degreeToRadians(degrees):
+    def degreeToRadians(self, degrees):
         return degrees * 0.17
 
     def getRemainingTime(self):
@@ -433,7 +458,11 @@ def on_message(client, userdata, msg):
             global obstacles
             robot.goodPoints = targets
             robot.badPoints = obstacles
-            robot.
+            print("*********** ASTAR *************")
+            print(robot.targetList)
+            robot.targetList = robot.bStarExpend()
+            print(robot.targetList)
+            print("*********** END ASTAR *************")
             coordT = targets.pop()
             GAME_STATE = 2
 
