@@ -94,13 +94,14 @@ class Robot(object):
         return points
 
     def getNearestNeighbour(fromPoint = [self.x, self.y]):
-        self.currentTarget
+        # self.currentTarget
         minDistance = 100000
         nextSucker = None
-        for point in self.getNonVisitedGoodPoints()):
-            distance= np.sqrt(np.dot((point-fromPoint),(point-fromPoint)))
-            if minDistance < distance:
+        for point in self.getNonVisitedGoodPoints():
+            distance = np.sqrt(np.dot((point-fromPoint),(point-fromPoint)))
+            if minDistance > distance:
                 nextSucker=point
+                minDistance=distance
 
         return nextSucker;
 
@@ -122,7 +123,7 @@ class Robot(object):
 
         if remainingTime < 0:
             remainingTime = 0
-            
+
         return remainingTime
 
 
@@ -179,17 +180,17 @@ def on_message(client, userdata, msg):
             print(robot.angle)
             robot.moveForward(20)
             robot.turnRight(5)
-        
 
-        
+
+
         if WAIT_FOR_EXEC_FLAG:
             pass
             #robot.check()
         else:
             robot.gotToPoint()
             WAIT_FOR_EXEC_FLAG = True
-        
-        
+
+
 
     elif GAME_STATE == 1:
         if (msg.topic == 'players/%s/game' % PLAYER_NAME):
