@@ -18,8 +18,8 @@ i = 0
 class Robot(object):
     """docstring for ClassName"""
     def __init__(self):
-        self.x = 0
-        self.y = 0
+        self.x = 480
+        self.y = 480
         self.rightCount = 0
         self.leftCount = 0
         self.angle = 0
@@ -27,14 +27,14 @@ class Robot(object):
     def moveForward(self, value):
         client.publish('robot/process', '{"command": "forward", "args": ' + str(value) + '}', qos=0, retain=False)
 
-    def backward(value):
-        return '{"command": backward", "args": ' + str(value) + '}'
+    def moveBackward(self, value):
+        client.publish('robot/process', '{"command": "backward", "args": ' + str(value) + '}', qos=0, retain=False)
 
-    def right(degree):
-        return '{"command": right", "args": ' + str(degree) + '}'
+    def turnRight(self, degree):
+        client.publish('robot/process', '{"command": "right", "args": ' + str(value) + '}', qos=0, retain=False)
 
-    def left(degree):
-        return '{"command": left", "args": ' + str(degree) + '}'
+    def turnLeft(self, degree):
+        client.publish('robot/process', '{"command": "left", "args": ' + str(value) + '}', qos=0, retain=False)
 
     def increment(self, vRight, vLeft):
         dRight = vRight - self.rightCount
@@ -84,9 +84,9 @@ def on_message(client, userdata, msg):
     global game_log
     global i
 
-    print(msg.topic)
+    #print(msg.topic)
     obj = json.loads(msg.payload.decode("utf-8"))
-    print(obj)
+    #print(obj)
 
     game_log.append(obj)
 
@@ -104,7 +104,7 @@ def on_message(client, userdata, msg):
         elif (msg.topic == 'players/%s/game' % PLAYER_NAME):
             print("********** STORED GAME_DATA ************")
             game_data = obj
-            print(obj)
+            print(obj['robot'])
             robot.moveForward(10)
 
             
