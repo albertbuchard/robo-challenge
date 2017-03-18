@@ -6,7 +6,7 @@ def bStarExpend(frontier = None, listPosition = []):
         # get all points distances from start
         minValueForPoint = 10000
         for (index, point) in enumerate(self.goodPoints):
-            if !(index in self.visitedGoodPoints):
+            if (index not in self.visitedGoodPoints):
                 travelTime = self.travelTime(point)
                 valueForPoint = self.valueFunction(point, None, travelTime)
 
@@ -19,7 +19,7 @@ def bStarExpend(frontier = None, listPosition = []):
         minValueForPoint = 100000
         for (frontierIndex,frontierData) in frontier.items(): # TODO cache the results
             for (index, value) in enumerate(self.goodPoints):
-                if (!(index in listPosition) and (!(index in self.visitedGoodPoints)):
+                if ((index not in listPosition) and (index not in self.visitedGoodPoints)):
                     if (index in hasattr(frontierData['nextDistances'], index)):
                         travelTime = fromPoint.travelTime + self.travelTime(point, self.goodPoints[frontierData.leafPosition])
                         valueForPoint = fromPoint.value + self.valueFunction(point, fromPoint, travelTime)
@@ -35,7 +35,7 @@ def bStarExpend(frontier = None, listPosition = []):
                         bestValue = valueForPoint
                         bestTravelTime = travelTime
 
-                    if (travelTime < minTravelTime)
+                    if (travelTime < minTravelTime):
                         minTravelTime = travelTime
 
         list.append(bestNext)
@@ -52,7 +52,7 @@ def bStarExpend(frontier = None, listPosition = []):
     else:
         return bStarExpend(frontier, listPosition)
 
-
+# self.maxDuration
 
 def getNonVisitedGoodPointsIndex(self):
     # loop through positive points TODO replace by array of non visited
