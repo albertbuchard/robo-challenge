@@ -24,6 +24,8 @@ targets = range(45)
 
 
 
+
+
 class Robot(object):
     """docstring for ClassName"""
     def __init__(self):
@@ -39,6 +41,12 @@ class Robot(object):
         self.visitedBadPoints = []
 
         self.beginAt = time.time()
+
+        self.speed = 49 # pt per sec
+        self.speedRotation = 36 # degree per sec
+
+        self.max_x = 1280
+        self.max_y = 960
 
 
 
@@ -97,13 +105,17 @@ class Robot(object):
         self.currentTarget
         minDistance = 100000
         nextSucker = None
-        for point in self.getNonVisitedGoodPoints()):
+        for point in self.getNonVisitedGoodPoints():
             distance= np.sqrt(np.dot((point-fromPoint),(point-fromPoint)))
             if minDistance < distance:
                 nextSucker=point
 
         return nextSucker;
 
+    def euclidianDistance(A,B):
+        A = np.array(A)
+        B = np.array(B)
+        return(np.sqrt(np.dot((A-B),(A-B))))
 
     def gotToPoint(self):
         xT = 1000
@@ -122,8 +134,11 @@ class Robot(object):
 
         if remainingTime < 0:
             remainingTime = 0
-            
+
         return remainingTime
+
+    def remainingDistance():
+        return(self.speed*(self.getRemainingTime()/1000))
 
 
 
@@ -179,17 +194,17 @@ def on_message(client, userdata, msg):
             print(robot.angle)
             robot.moveForward(20)
             robot.turnRight(5)
-        
 
-        
+
+
         if WAIT_FOR_EXEC_FLAG:
             pass
             #robot.check()
         else:
             robot.gotToPoint()
             WAIT_FOR_EXEC_FLAG = True
-        
-        
+
+
 
     elif GAME_STATE == 1:
         if (msg.topic == 'players/%s/game' % PLAYER_NAME):

@@ -20,10 +20,17 @@ def getNumberOfPointInCell(point, cell):
     cellHeight = cell[3]
 
     if ((py > celly) && (py <= celly + cellHeight)&&(px> cellx)&&(px =< cellx+cellWidth)):
-        return True 
+        return True
 
-def getDensityForPoint():
+def getDensityForPoint(totalPoints):
     # either you place the point in the grid a get the value of the grid
     # or you compute the local density
     # density radius should depend on remaining time
+    remainingPoints = len(self.visitedGoodPoints)
+
+
     return density
+
+def pointCloserThan(distance, from = (self.x, self.y)):
+    for point in self.getNonVisitedGoodPoints():
+        if ()
