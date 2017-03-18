@@ -9,11 +9,16 @@ PORT = 1883
 PLAYER_NAME = "TheRegressor"
 
 GAME_STATE = 0 # 0 is waiting, 1 is playing
-DISTANCE_BETWEEN_WEELS = 4.8*180/m.pi
+DISTANCE_BETWEEN_WEELS = 25210.14298575622/90
 CONVERT_COUNT_DIST = 3/10
 game_data = {}
 game_log = []
 i = 0
+
+WAIT_FOR_EXEC_FLAG = False
+targets = range(45)
+
+
 
 class Robot(object):
     """docstring for ClassName"""
@@ -49,15 +54,15 @@ class Robot(object):
         dLeft = vLeft - self.leftCount
         dCenter = (dRight+dLeft)*CONVERT_COUNT_DIST/2
         dAngle = (dLeft-dRight)/DISTANCE_BETWEEN_WEELS
-        self.x = self.x + dCenter*m.cos(dAngle)
-        self.y = self.y + dCenter*m.sin(dAngle)
+        self.x = self.x + dCenter*m.cos(self.angle*m.pi/180)
+        self.y = self.y - dCenter*m.sin(self.angle*m.pi/180)
         self.angle = self.angle + dAngle*180/m.pi
         self.rightCount = vRight
         self.leftCount = vLeft
 
     def getTargetAngle(self, xTarget, yTarget):
         xDiff = self.x - xTarget
-        yDiff = self.x - yTarget
+        yDiff = self.y - yTarget
         targetAngle = math.abs(math.tan(xDiff/yDiff))
         if yDiff > 0:
             if xDiff < 0:
@@ -77,7 +82,7 @@ class Robot(object):
                 points.append(point)
             pass
 
-    return points
+        return points
 
     def getNearestNeighbour(fromPoint = [self.x, self.y]):
         self.currentTarget
@@ -117,6 +122,7 @@ def on_message(client, userdata, msg):
     global GAME_STATE
     global game_log
     global i
+    global targets
 
     #print(msg.topic)
     obj = json.loads(msg.payload.decode("utf-8"))
@@ -125,7 +131,7 @@ def on_message(client, userdata, msg):
     game_log.append(obj)
 
 
-    if GAME_STATE == 1:
+    if GAME_STATE == 2:
         if msg.topic == 'robot/state':
             robot.increment(obj['right_motor'], obj['left_motor'])
             #print(obj)
@@ -141,23 +147,37 @@ def on_message(client, userdata, msg):
             print(obj['robot'])
             print(robot.x)
             print(robot.y)
-            robot.moveForward(10)
+            print(robot.angle)
+            robot.moveForward(20)
+            robot.turnRight(5)
+        '''
+        if WAIT_FOR_EXEC_FLAG:
+            robot.check(targets)
+        else:
+            robot.gotToPoint(targets)
+        '''
+
+    elif GAME_STATE == 1:
+        if (msg.topic == 'players/%s/game' % PLAYER_NAME):
+            #generateTargets(obj['points'])
+            GAME_STATE = 2
 
 
-elif (GAME_STATE == 0):
-    if ((msg.topic=='players/%s/incoming' % PLAYER_NAME) and ("command" in obj)):
-        if (obj['command'] == "start"):
-            print("********** RECEIVED START FROM SERVER ************")
-                client.publish('players/' + PLAYER_NAME , '{"command": "start"}')
-                    GAME_STATE = 1
-                elif (obj['command'] == "finished"):
-                    print("********** RECEIVED FINISHED FROM SERVER ************")
-                    GAME_STATE = 0
-                    client.disconnect()
-                    exit()
+
+    elif (GAME_STATE == 0):
+        if ((msg.topic=='players/%s/incoming' % PLAYER_NAME) and ("command" in obj)):
+            if (obj['command'] == "start"):
+                print("********** RECEIVED START FROM SERVER ************")
+                    client.publish('players/' + PLAYER_NAME , '{"command": "start"}')
+                        GAME_STATE = 1
+                    elif (obj['command'] == "finished"):
+                        print("********** RECEIVED FINISHED FROM SERVER ************")
+                        GAME_STATE = 0
+                        client.disconnect()
+                        exit()
 
 
-i += 1
+    i += 1
     if (i>=10):
         i = 0
         with open("data.txt","w") as f: #in write mode
