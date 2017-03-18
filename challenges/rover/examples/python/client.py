@@ -52,7 +52,7 @@ class Robot(object):
 
         self.max_x = 1280
         self.max_y = 960
-        self.maxDuration = 120000
+        self.maxDuration = 120
 
 
 
@@ -170,7 +170,6 @@ class Robot(object):
 
 
     def gotToPoint(self, coordT):
-        robot.stop()
         xT = coordT[0]
         yT = coordT[1]
         aT = robot.getTargetAngle(xT,yT)
@@ -193,6 +192,8 @@ class Robot(object):
 
     # BSTAR ALGORITHM
     def bStarExpend(self, frontier = None, listPosition = []):
+        minTravelTime = None
+
         if frontier == None:
             frontier = {}
             # get all points distances from start
@@ -205,44 +206,54 @@ class Robot(object):
                     frontier[index] = {'leafPosition': index, 'value': valueForPoint, 'path':[index], 'travelTime': travelTime, 'nextDistances':{}}
                     if (valueForPoint < minValueForPoint):
                         bestNext = index
+                        minValueForPoint = valueForPoint
+
+                    if (minTravelTime is None) or (travelTime < minTravelTime):
+                        minTravelTime = travelTime
+
             listPosition.append(bestNext)
         else:
-            minTravelTime = 100000
             minValueForPoint = 100000
             for (frontierIndex,frontierData) in frontier.items(): # TODO cache the results
-                for (index, value) in enumerate(self.goodPoints):
+                for (index, point) in enumerate(self.goodPoints):
                     if ((index not in listPosition) and (index not in self.visitedGoodPoints)):
                         if (hasattr(frontierData['nextDistances'], str(index))):
                             travelTime = frontierData['nextDistances'][index]['travelTime']
                             valueForPoint = frontierData['nextDistances'][index]['valueForPoint']
 
                         else:
-                            print(frontier)
-                            travelTime = fromPoint.travelTime + self.travelTime(point, self.goodPoints[frontierData.leafPosition])
-                            valueForPoint = fromPoint.value + self.valueFunction(point, fromPoint, travelTime)
+                            travelTime = frontierData['travelTime'] + self.travelTime(point, self.goodPoints[frontierData['leafPosition']])
+                            valueForPoint = frontierData['value'] + self.valueFunction(point, self.goodPoints[frontierData['leafPosition']], travelTime)
                             frontier[frontierIndex]['nextDistances'][index] = {travelTime: travelTime, valueForPoint: valueForPoint}
-                        
+
 
                         #frontier.append()
-                        if (valueForPoint < minValueForPoint):
+
+                        if (minValueForPoint is None) or (valueForPoint < minValueForPoint):
                             bestNext = index
                             bestFrontiere = frontierIndex
                             bestValue = valueForPoint
+                            print(valueForPoint)
                             bestTravelTime = travelTime
+                            print("TRAVEL" + str(travelTime))
+                            minValueForPoint = valueForPoint
 
-                        if (travelTime < minTravelTime):
+                        if (minTravelTime is None) or (travelTime < minTravelTime):
                             minTravelTime = travelTime
 
+
             listPosition.append(bestNext)
-            newPath = frontier[bestFrontiere]['path'].append(bestNext)
+            frontier[bestFrontiere]['path'].append(bestNext)
 
             frontier[bestFrontiere] = {'leafPosition': bestNext,
             'value': valueForPoint,
-            'path': newPath,
+            'path': frontier[bestFrontiere]['path'],
             'travelTime': frontier[bestFrontiere]['travelTime'] + bestTravelTime,
             'nextDistances': {}}
 
-        if (travelTime > self.maxDuration):
+
+        if (minTravelTime > self.maxDuration):
+            print(listPosition)
             return listPosition
         else:
             return self.bStarExpend(frontier, listPosition)
@@ -264,7 +275,7 @@ class Robot(object):
         if (travelTime is None):
             travelTime = self.travelTime(point, fromPoint)
 
-        V = travelTime + self.remainainingTimeForPoint(forPoint)
+        V = travelTime + self.remainainingTimeForPoint(forPoint, travelTime)
 
         return V
 
@@ -274,6 +285,11 @@ class Robot(object):
         return V
 
     # Model
+    def markCloseAsVisited(self, limit = 5):
+        for index in self.pointCloserThanIndex(limit):
+            self.visitedGoodPoints.append(index)
+
+
     def timeToGoTo(self, target, fromPoint = None):
         if fromPoint is None:
             fromPoint = self.currentPositionPoint()
@@ -284,7 +300,7 @@ class Robot(object):
         if fromPoint is None:
             fromPoint = self.currentPositionPoint()
 
-        angle = self.getAngleBetweenAB(point, fromPoint)
+        angle = m.fabs(self.getAngleBetweenAB(point, fromPoint))
 
         return (angle / self.angularSpeed)
 
@@ -296,16 +312,16 @@ class Robot(object):
         else:
             return np.sqrt((math.pi*math.pow(distance,2)/self.pointCloserThan(distance, center)))/self.speed
 
-    def remainainingTimeForPoint(self, center = None):
+    def remainainingTimeForPoint(self, center = None, timeShift = None):
         if center is None:
             center = self.currentPositionPoint()
 
         remainingPoints = 45 - len(self.visitedGoodPoints) # TODO replace by number of points
-        vicinityPoint = self.pointCloserThan(self.remainingDistance(), center)
-
+        #vicinityPoint = self.pointCloserThan(self.remainingDistance(timeShift), center)
+        vicinityPoint = self.pointCloserThan(150, center)
         remainingDensity = self.remainingDensityForPoint(center)
 
-        return self.averageDistanceForDensity(remainingDensity)*(remainingPoints - len(vicinityPoint))
+        return -self.averageDistanceForDensity(remainingDensity)*(remainingPoints - len(vicinityPoint))
 
 
     # Density
@@ -367,6 +383,17 @@ class Robot(object):
 
         return points
 
+    def pointCloserThanIndex(self, distance, fromPoint = None):
+        if fromPoint is None:
+            fromPoint = self.currentPositionPoint()
+
+        points = []
+        for point in self.getNonVisitedGoodPointsIndex():
+            if (euclidianDistance(fromPoint, this.goodPoints[point]) < distance):
+                points.append(point)
+
+        return points
+
     def currentPositionPoint(self):
         return [self.x,self.y]
 
@@ -387,8 +414,11 @@ class Robot(object):
 
         return remainingTime
 
-    def remainingDistance(self):
-        return(self.speed*(self.getRemainingTime()/1000))
+    def remainingDistance(self, timeShift = 0):
+        if self.getRemainingTime()-timeShift < 0:
+            return 0
+
+        return(self.speed*((self.getRemainingTime()-timeShift)/1000))
 
 
 # The callback for when the client receives a CONNACK response from the server.
@@ -438,7 +468,7 @@ def on_message(client, userdata, msg):
             # print(robot.y)
             # print(robot.angle)
             robot.updateCoord(obj['robot'])
-
+            robot.markCloseAsVisited();
             '''
             if WAIT_FOR_EXEC_FLAG:
                 robot.checkArrival(coordT)
@@ -463,6 +493,8 @@ def on_message(client, userdata, msg):
             robot.targetList = robot.bStarExpend()
             print(robot.targetList)
             print("*********** END ASTAR *************")
+            temp = [ targets[i] for i in robot.targetList] + [element for i, element in enumerate(targets) if i not in robot.targetList]
+            targets = temp
             coordT = targets.pop()
             GAME_STATE = 2
 
