@@ -2,6 +2,7 @@ import paho.mqtt.client as mqtt
 import json
 import math as m
 import numpy as np
+import time
 
 SERVER = "127.0.0.1"
 PORT = 1883
@@ -11,6 +12,9 @@ PLAYER_NAME = "TheRegressor"
 GAME_STATE = 0 # 0 is waiting, 1 is playing
 DISTANCE_BETWEEN_WEELS = 25210.14298575622/90
 CONVERT_COUNT_DIST = 3/10
+goodPoints = numpy.zeros(shape=(45,2))
+badPoints = numpy.zeros(shape=(5,2))
+targetPoint = 0 #index of goodPoints which is the current target
 game_data = {}
 game_log = []
 i = 0
@@ -34,9 +38,11 @@ class Robot(object):
         self.visitedGoodPoints = []
         self.visitedBadPoints = []
 
+        self.beginAt = time.time()
 
 
 
+    # Mouvements
     def moveForward(self, value):
         client.publish('robot/process', '{"command": "forward", "args": ' + str(value) + '}', qos=0, retain=False)
 
@@ -60,6 +66,7 @@ class Robot(object):
         self.rightCount = vRight
         self.leftCount = vLeft
 
+    # Trig functions
     def getTargetAngle(self, xTarget, yTarget):
         xDiff = self.x - xTarget
         yDiff = self.y - yTarget
@@ -74,8 +81,8 @@ class Robot(object):
                 targetAngle = 180 + targetAngle
         return targetAngle
 
-    '''
 
+    # Path finding
     def getNonVisitedGoodPoints():
         # loop through positive points
         points = []
@@ -91,15 +98,11 @@ class Robot(object):
         minDistance = 100000
         nextSucker = None
         for point in self.getNonVisitedGoodPoints()):
-
             distance= np.sqrt(np.dot((point-fromPoint),(point-fromPoint)))
-                if minDistance < distance:
-                    nextSucker=point
-
+            if minDistance < distance:
+                nextSucker=point
 
         return nextSucker;
-
-    '''
 
 
     def gotToPoint(self):
@@ -111,6 +114,17 @@ class Robot(object):
         self.turnRight((aT-self.angle)%360)
         distanceToTarge = m.sqrt((xT-self.x)*(xT-self.x)+(yT-self.y)*(yT-self.y))
         self.moveForward(distanceToTarge/CONVERT_COUNT_DIST)
+
+
+    def getRemainingTime():
+        timeSpentInMs = time.time() - self.beginAt
+        remainingTime = 120000 - timeSpentInMs
+
+        if remainingTime < 0:
+            remainingTime = 0
+            
+        return remainingTime
+
 
 
 
@@ -204,6 +218,18 @@ def on_message(client, userdata, msg):
             f.write("{}".format(game_log))
 
 
+def generateTargets(points):
+    goodCounter = 0
+    badCounter = 0
+    for point in points:
+        if point["score"] == 1:
+            goodPoints[goodCounter] = [point["x"], point["y"]]
+            goodCounter += 1
+        else:
+            badPoints[badCounter] = [point["x"], point["y"]]
+            badCounter += 1
+    print("Good points:" + goodPoints)
+    print("Bad points:" + badPoints)
 
 
 
