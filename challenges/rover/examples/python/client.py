@@ -43,7 +43,8 @@ class Robot(object):
         self.beginAt = time.time()
 
         self.speed = 49 # pt per sec
-        self.speedRotation = 36 # degree per sec
+        self.angularSpeed = 0.62 # radian/s
+        self.angularSpeedDegree = 36 # degree per sec
 
         self.max_x = 1280
         self.max_y = 960
@@ -75,7 +76,7 @@ class Robot(object):
         self.leftCount = vLeft
 
     # Trig functions
-    def getTargetAngle(self, xTarget, yTarget):
+    def getTargetAngle(self, xTarget, yTarget, degrees = True):
         xDiff = self.x - xTarget
         yDiff = self.y - yTarget
         targetAngle = abs(m.tan(xDiff/yDiff))
@@ -87,11 +88,17 @@ class Robot(object):
                 targetAngle = 180 - targetAngle
             else:
                 targetAngle = 180 + targetAngle
-        return targetAngle
 
+        if degrees == True:
+            return targetAngle
+        else:
+            return self.degreeToRadians(targetAngle)
+
+    def degreeToRadians(degrees):
+        return degrees * 0.17
 
     # Path finding
-    def getNonVisitedGoodPoints():
+    def getNonVisitedGoodPoints(self):
         # loop through positive points
         points = []
         for (index, point) in enumerate(self.goodPoints):
@@ -101,7 +108,7 @@ class Robot(object):
 
         return points
 
-    def getNearestNeighbour(fromPoint = None):
+    def getNearestNeighbour(self, fromPoint = None):
         if fromPoint is None:
             fromPoint = self.currentTarget
 
@@ -113,13 +120,8 @@ class Robot(object):
                 nextSucker=point
 
         return nextSucker;
-
-    def euclidianDistance(A,B):
-        A = np.array(A)
-        B = np.array(B)
-        return(np.sqrt(np.dot((A-B),(A-B))))
-
-    def gotToPoint(self):
+ 
+    def gotToPoint(self,self):
         xT = 1000
         yT = 900
         aT = self.getTargetAngle(xT,yT)
@@ -129,10 +131,7 @@ class Robot(object):
         distanceToTarge = m.sqrt((xT-self.x)*(xT-self.x)+(yT-self.y)*(yT-self.y))
         self.moveForward(distanceToTarge/CONVERT_COUNT_DIST)
 
-    def currentPositionPoint():
-        return [self.x,self.y]
-        
-    def getRemainingTime():
+    def getRemainingTime(self):
         timeSpentInMs = time.time() - self.beginAt
         remainingTime = 120000 - timeSpentInMs
 
@@ -141,7 +140,7 @@ class Robot(object):
 
         return remainingTime
 
-    def remainingDistance():
+    def remainingDistance(self):
         return(self.speed*(self.getRemainingTime()/1000))
 
 
